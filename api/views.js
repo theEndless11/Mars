@@ -99,6 +99,3 @@ module.exports = async function handler(req, res) {
         });
     }
 };
-
-// Export helper function for use in other modules
-module.exports.getPostViewStats = getPostViewStats;
