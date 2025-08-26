@@ -9,7 +9,7 @@ const setCorsHeaders = (res) => {
 
 module.exports = async function handler(req, res) {
     setCorsHeaders(res);
-
+    
     // Handle pre-flight OPTIONS request
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'GET') {
         const { username } = req.query;
-
+        
         if (!username) {
             return res.status(400).json({ message: 'Username is required' });
         }
@@ -45,10 +45,31 @@ module.exports = async function handler(req, res) {
                 AND f.relationship_status = 'accepted'
                 AND (u1.username IS NOT NULL AND u2.username IS NOT NULL)
             `;
-
+            
             const [friendsResult] = await promisePool.execute(friendsQuery, [
                 username, username, username, username, username, username, username, username
             ]);
+
+            // Helper function to format profile picture
+            const formatProfilePicture = (profilePicture) => {
+                if (!profilePicture) {
+                    return 'https://latestnewsandaffairs.site/public/pfp.jpg';
+                }
+                
+                // If it's already a full URL, return as is
+                if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
+                    return profilePicture;
+                }
+                
+                // If it's base64 but doesn't have the data URL prefix, add it
+                if (!profilePicture.startsWith('data:image/')) {
+                    // Assume it's a JPEG if no format is specified
+                    return `data:image/jpeg;base64,${profilePicture}`;
+                }
+                
+                // It's already properly formatted base64
+                return profilePicture;
+            };
 
             // Format friends list
             const friendsList = friendsResult
@@ -56,7 +77,7 @@ module.exports = async function handler(req, res) {
                 .map(friend => ({
                     id: friend.friend_id,
                     username: friend.friend_username,
-                    profile_picture: friend.friend_profile_picture || 'https://latestnewsandaffairs.site/public/pfp.jpg'
+                    profile_picture: formatProfilePicture(friend.friend_profile_picture)
                 }));
 
             // Response payload
@@ -70,7 +91,10 @@ module.exports = async function handler(req, res) {
 
         } catch (error) {
             console.error("❌ Error fetching friends list:", error);
-            return res.status(500).json({ message: 'Error retrieving friends list', error: error.message });
+            return res.status(500).json({ 
+                message: 'Error retrieving friends list', 
+                error: error.message 
+            });
         }
     }
 
